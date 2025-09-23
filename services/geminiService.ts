@@ -15,9 +15,9 @@ const fileToPart = async (file: File): Promise<{ inlineData: { mimeType: string;
     });
     
     const arr = dataUrl.split(',');
-    if (arr.length < 2) throw new Error("Invalid data URL");
+    if (arr.length < 2) throw new Error("URL de dados inválida");
     const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch || !mimeMatch[1]) throw new Error("Could not parse MIME type from data URL");
+    if (!mimeMatch || !mimeMatch[1]) throw new Error("Não foi possível extrair o tipo MIME da URL de dados");
     
     const mimeType = mimeMatch[1];
     const data = arr[1];
@@ -28,10 +28,17 @@ const handleApiResponse = (
     response: GenerateContentResponse,
     context: string // e.g., "edit", "filter", "adjustment"
 ): string => {
+    const contextMap: { [key: string]: string } = {
+        edit: 'edição',
+        filter: 'filtro',
+        adjustment: 'ajuste',
+    };
+    const translatedContext = contextMap[context] || context;
+
     // 1. Check for prompt blocking first
     if (response.promptFeedback?.blockReason) {
         const { blockReason, blockReasonMessage } = response.promptFeedback;
-        const errorMessage = `Request was blocked. Reason: ${blockReason}. ${blockReasonMessage || ''}`;
+        const errorMessage = `A solicitação foi bloqueada. Motivo: ${blockReason}. ${blockReasonMessage || ''}`;
         console.error(errorMessage, { response });
         throw new Error(errorMessage);
     }
@@ -48,16 +55,16 @@ const handleApiResponse = (
     // 3. If no image, check for other reasons
     const finishReason = response.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== 'STOP') {
-        const errorMessage = `Image generation for ${context} stopped unexpectedly. Reason: ${finishReason}. This often relates to safety settings.`;
+        const errorMessage = `A geração de imagem para ${translatedContext} parou inesperadamente. Motivo: ${finishReason}. Isso geralmente está relacionado às configurações de segurança.`;
         console.error(errorMessage, { response });
         throw new Error(errorMessage);
     }
     
     const textFeedback = response.text?.trim();
-    const errorMessage = `The AI model did not return an image for the ${context}. ` + 
+    const errorMessage = `O modelo de IA não retornou uma imagem para o(a) ${translatedContext}. ` + 
         (textFeedback 
-            ? `The model responded with text: "${textFeedback}"`
-            : "This can happen due to safety filters or if the request is too complex. Please try rephrasing your prompt to be more direct.");
+            ? `O modelo respondeu com o texto: "${textFeedback}"`
+            : "Isso pode acontecer devido a filtros de segurança ou se a solicitação for muito complexa. Tente reformular seu comando para ser mais direto.");
 
     console.error(`Model response did not contain an image part for ${context}.`, { response });
     throw new Error(errorMessage);
