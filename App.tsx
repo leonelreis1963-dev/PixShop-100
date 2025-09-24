@@ -51,7 +51,7 @@ const App: React.FC = () => {
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const imgRef = useRef<HTMLImageElement>(null);
   
-  const [isApiKeySet, setIsApiKeySet] = useState<boolean>(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [isCheckingApiKey, setIsCheckingApiKey] = useState<boolean>(true);
 
   const currentImage = history[historyIndex] ?? null;
@@ -62,22 +62,16 @@ const App: React.FC = () => {
 
   // API Key check effect
   useEffect(() => {
-    // The polyfill and initial key setting is now in index.tsx.
-    // We just need to check if the key exists to decide whether to show the modal.
-    // @ts-ignore
-    if (window.process?.env?.API_KEY) {
-        setIsApiKeySet(true);
+    const savedKey = sessionStorage.getItem('gemini_api_key');
+    if (savedKey) {
+        setApiKey(savedKey);
     }
     setIsCheckingApiKey(false);
   }, []);
 
-  const handleSaveApiKey = (apiKey: string) => {
-    sessionStorage.setItem('gemini_api_key', apiKey);
-    // The polyfill is in index.tsx, so we can assume window.process.env exists.
-    // We just need to set the key.
-    // @ts-ignore
-    window.process.env.API_KEY = apiKey;
-    setIsApiKeySet(true);
+  const handleSaveApiKey = (key: string) => {
+    sessionStorage.setItem('gemini_api_key', key);
+    setApiKey(key);
   };
 
   // Effect to create and revoke object URLs safely for the current image
@@ -132,7 +126,10 @@ const App: React.FC = () => {
       setError('Nenhuma imagem carregada para editar.');
       return;
     }
-    
+    if (!apiKey) {
+      setError('A chave de API não foi definida. Por favor, recarregue e configure sua chave.');
+      return;
+    }
     if (!prompt.trim()) {
         setError('Por favor, insira uma descrição para sua edição.');
         return;
@@ -147,7 +144,7 @@ const App: React.FC = () => {
     setError(null);
     
     try {
-        const editedImageUrl = await generateEditedImage(currentImage, prompt, editHotspot);
+        const editedImageUrl = await generateEditedImage(apiKey, currentImage, prompt, editHotspot);
         const newImageFile = dataURLtoFile(editedImageUrl, `edited-${Date.now()}.png`);
         addImageToHistory(newImageFile);
         setEditHotspot(null);
@@ -159,11 +156,15 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, prompt, editHotspot, addImageToHistory]);
+  }, [apiKey, currentImage, prompt, editHotspot, addImageToHistory]);
   
   const handleApplyFilter = useCallback(async (filterPrompt: string) => {
     if (!currentImage) {
       setError('Nenhuma imagem carregada para aplicar um filtro.');
+      return;
+    }
+     if (!apiKey) {
+      setError('A chave de API não foi definida. Por favor, recarregue e configure sua chave.');
       return;
     }
     
@@ -171,7 +172,7 @@ const App: React.FC = () => {
     setError(null);
     
     try {
-        const filteredImageUrl = await generateFilteredImage(currentImage, filterPrompt);
+        const filteredImageUrl = await generateFilteredImage(apiKey, currentImage, filterPrompt);
         const newImageFile = dataURLtoFile(filteredImageUrl, `filtered-${Date.now()}.png`);
         addImageToHistory(newImageFile);
     } catch (err) {
@@ -181,11 +182,15 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, addImageToHistory]);
+  }, [apiKey, currentImage, addImageToHistory]);
   
   const handleApplyAdjustment = useCallback(async (adjustmentPrompt: string) => {
     if (!currentImage) {
       setError('Nenhuma imagem carregada para aplicar um ajuste.');
+      return;
+    }
+    if (!apiKey) {
+      setError('A chave de API não foi definida. Por favor, recarregue e configure sua chave.');
       return;
     }
     
@@ -193,7 +198,7 @@ const App: React.FC = () => {
     setError(null);
     
     try {
-        const adjustedImageUrl = await generateAdjustedImage(currentImage, adjustmentPrompt);
+        const adjustedImageUrl = await generateAdjustedImage(apiKey, currentImage, adjustmentPrompt);
         const newImageFile = dataURLtoFile(adjustedImageUrl, `adjusted-${Date.now()}.png`);
         addImageToHistory(newImageFile);
     } catch (err) {
@@ -203,7 +208,7 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, addImageToHistory]);
+  }, [apiKey, currentImage, addImageToHistory]);
 
   const handleApplyCrop = useCallback(() => {
     if (!completedCrop || !imgRef.current) {
@@ -528,7 +533,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (!isApiKeySet) {
+  if (!apiKey) {
     return (
         <div className="min-h-screen text-gray-100 flex flex-col">
             <Header />

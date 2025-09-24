@@ -72,18 +72,23 @@ const handleApiResponse = (
 
 /**
  * Generates an edited image using generative AI based on a text prompt and a specific point.
+ * @param apiKey The Google AI API key.
  * @param originalImage The original image file.
  * @param userPrompt The text prompt describing the desired edit.
  * @param hotspot The {x, y} coordinates on the image to focus the edit.
  * @returns A promise that resolves to the data URL of the edited image.
  */
 export const generateEditedImage = async (
+    apiKey: string,
     originalImage: File,
     userPrompt: string,
     hotspot: { x: number, y: number }
 ): Promise<string> => {
+    if (!apiKey) {
+        throw new Error('An API Key must be set when running in a browser.');
+    }
     console.log('Starting generative edit at:', hotspot);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    const ai = new GoogleGenAI({ apiKey });
     
     const originalImagePart = await fileToPart(originalImage);
     const prompt = `You are an expert photo editor AI. Your task is to perform a natural, localized edit on the provided image based on the user's request.
@@ -113,16 +118,21 @@ Output: Return ONLY the final edited image. Do not return text.`;
 
 /**
  * Generates an image with a filter applied using generative AI.
+ * @param apiKey The Google AI API key.
  * @param originalImage The original image file.
  * @param filterPrompt The text prompt describing the desired filter.
  * @returns A promise that resolves to the data URL of the filtered image.
  */
 export const generateFilteredImage = async (
+    apiKey: string,
     originalImage: File,
     filterPrompt: string,
 ): Promise<string> => {
+    if (!apiKey) {
+        throw new Error('An API Key must be set when running in a browser.');
+    }
     console.log(`Starting filter generation: ${filterPrompt}`);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    const ai = new GoogleGenAI({ apiKey });
     
     const originalImagePart = await fileToPart(originalImage);
     const prompt = `You are an expert photo editor AI. Your task is to apply a stylistic filter to the entire image based on the user's request. Do not change the composition or content, only apply the style.
@@ -147,16 +157,21 @@ Output: Return ONLY the final filtered image. Do not return text.`;
 
 /**
  * Generates an image with a global adjustment applied using generative AI.
+ * @param apiKey The Google AI API key.
  * @param originalImage The original image file.
  * @param adjustmentPrompt The text prompt describing the desired adjustment.
  * @returns A promise that resolves to the data URL of the adjusted image.
  */
 export const generateAdjustedImage = async (
+    apiKey: string,
     originalImage: File,
     adjustmentPrompt: string,
 ): Promise<string> => {
+    if (!apiKey) {
+        throw new Error('An API Key must be set when running in a browser.');
+    }
     console.log(`Starting global adjustment generation: ${adjustmentPrompt}`);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    const ai = new GoogleGenAI({ apiKey });
     
     const originalImagePart = await fileToPart(originalImage);
     const prompt = `You are an expert photo editor AI. Your task is to perform a natural, global adjustment to the entire image based on the user's request.
