@@ -14,6 +14,7 @@ import AdjustmentPanel from './components/AdjustmentPanel';
 import CropPanel from './components/CropPanel';
 import { UndoIcon, RedoIcon, EyeIcon } from './components/icons';
 import StartScreen from './components/StartScreen';
+import ApiKeyModal from './components/ApiKeyModal';
 
 // Helper to convert a data URL string to a File object
 const dataURLtoFile = (dataurl: string, filename: string): File => {
@@ -49,12 +50,36 @@ const App: React.FC = () => {
   const [aspect, setAspect] = useState<number | undefined>();
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   
   const currentImage = history[historyIndex] ?? null;
   const originalImage = history[0] ?? null;
 
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let key: string | null = null;
+    try {
+        if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+            key = process.env.API_KEY;
+        }
+    } catch (e) {
+        console.warn('Could not access process.env.API_KEY');
+    }
+
+    if (!key) {
+        key = sessionStorage.getItem('gemini-api-key');
+    }
+
+    if (key) {
+        setApiKey(key);
+    } else {
+        setIsModalOpen(true);
+    }
+  }, []);
 
   // Effect to create and revoke object URLs safely for the current image
   useEffect(() => {
@@ -105,14 +130,27 @@ const App: React.FC = () => {
 
   const handleApiError = useCallback((err: unknown, context: string) => {
     let errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
-    if (errorMessage.includes('API Key must be set')) {
-        errorMessage = 'A chave de API do Google AI não foi encontrada. Se você for o desenvolvedor, certifique-se de que a variável de ambiente API_KEY está configurada corretamente em seu ambiente de implantação (por exemplo, Vercel).';
+    
+    // Check for invalid API key from Google's backend
+    if (errorMessage.includes('API key not valid') || errorMessage.includes('API_KEY_INVALID')) {
+        errorMessage = 'Sua chave de API parece ser inválida. Por favor, verifique-a e insira novamente.';
+        sessionStorage.removeItem('gemini-api-key');
+        setApiKey(null);
+        setIsModalOpen(true);
+    } else if (errorMessage.includes('API Key must be set') || errorMessage.includes('API key is missing')) { // Fallback
+        errorMessage = 'A chave de API do Google AI não foi encontrada. Por favor, insira sua chave para continuar.';
+        setIsModalOpen(true);
     }
     setError(`${context} ${errorMessage}`);
     console.error(err);
   }, []);
 
   const handleGenerate = useCallback(async () => {
+    if (!apiKey) {
+      setError('Por favor, configure sua chave de API para continuar.');
+      setIsModalOpen(true);
+      return;
+    }
     if (!currentImage) {
       setError('Nenhuma imagem carregada para editar.');
       return;
@@ -131,7 +169,7 @@ const App: React.FC = () => {
     setError(null);
     
     try {
-        const editedImageUrl = await generateEditedImage(currentImage, prompt, editHotspot);
+        const editedImageUrl = await generateEditedImage(currentImage, prompt, editHotspot, apiKey);
         const newImageFile = dataURLtoFile(editedImageUrl, `edited-${Date.now()}.png`);
         addImageToHistory(newImageFile);
         setEditHotspot(null);
@@ -141,9 +179,14 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, prompt, editHotspot, addImageToHistory, handleApiError]);
+  }, [currentImage, prompt, editHotspot, addImageToHistory, handleApiError, apiKey]);
   
   const handleApplyFilter = useCallback(async (filterPrompt: string) => {
+    if (!apiKey) {
+      setError('Por favor, configure sua chave de API para continuar.');
+      setIsModalOpen(true);
+      return;
+    }
     if (!currentImage) {
       setError('Nenhuma imagem carregada para aplicar um filtro.');
       return;
@@ -153,7 +196,7 @@ const App: React.FC = () => {
     setError(null);
     
     try {
-        const filteredImageUrl = await generateFilteredImage(currentImage, filterPrompt);
+        const filteredImageUrl = await generateFilteredImage(currentImage, filterPrompt, apiKey);
         const newImageFile = dataURLtoFile(filteredImageUrl, `filtered-${Date.now()}.png`);
         addImageToHistory(newImageFile);
     } catch (err) {
@@ -161,9 +204,14 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, addImageToHistory, handleApiError]);
+  }, [currentImage, addImageToHistory, handleApiError, apiKey]);
   
   const handleApplyAdjustment = useCallback(async (adjustmentPrompt: string) => {
+    if (!apiKey) {
+      setError('Por favor, configure sua chave de API para continuar.');
+      setIsModalOpen(true);
+      return;
+    }
     if (!currentImage) {
       setError('Nenhuma imagem carregada para aplicar um ajuste.');
       return;
@@ -173,7 +221,7 @@ const App: React.FC = () => {
     setError(null);
     
     try {
-        const adjustedImageUrl = await generateAdjustedImage(currentImage, adjustmentPrompt);
+        const adjustedImageUrl = await generateAdjustedImage(currentImage, adjustmentPrompt, apiKey);
         const newImageFile = dataURLtoFile(adjustedImageUrl, `adjusted-${Date.now()}.png`);
         addImageToHistory(newImageFile);
     } catch (err) {
@@ -181,7 +229,7 @@ const App: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, addImageToHistory, handleApiError]);
+  }, [currentImage, addImageToHistory, handleApiError, apiKey]);
 
   const handleApplyCrop = useCallback(() => {
     if (!completedCrop || !imgRef.current) {
@@ -300,6 +348,13 @@ const App: React.FC = () => {
     setEditHotspot({ x: originalX, y: originalY });
 };
 
+  const handleSaveApiKey = (key: string) => {
+    sessionStorage.setItem('gemini-api-key', key);
+    setApiKey(key);
+    setIsModalOpen(false);
+    setError(null); // Clear any previous API key errors
+  };
+
   const renderContent = () => {
     if (error) {
        return (
@@ -307,7 +362,10 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-bold text-red-300">Ocorreu um Erro</h2>
             <p className="text-md text-red-400">{error}</p>
             <button
-                onClick={() => setError(null)}
+                onClick={() => {
+                  setError(null);
+                  if (!apiKey) setIsModalOpen(true);
+                }}
                 className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-md transition-colors"
               >
                 Tentar Novamente
@@ -498,6 +556,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen text-gray-100 flex flex-col">
       <Header />
+      {isModalOpen && <ApiKeyModal onSave={handleSaveApiKey} />}
       <main className={`flex-grow w-full max-w-[1600px] mx-auto p-4 md:p-8 flex justify-center ${currentImage ? 'items-start' : 'items-center'}`}>
         {renderContent()}
       </main>
