@@ -103,6 +103,15 @@ const App: React.FC = () => {
     setCompletedCrop(undefined);
   }, []);
 
+  const handleApiError = useCallback((err: unknown, context: string) => {
+    let errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
+    if (errorMessage.includes('API Key must be set')) {
+        errorMessage = 'A chave de API do Google AI não foi encontrada. Se você for o desenvolvedor, certifique-se de que a variável de ambiente API_KEY está configurada corretamente em seu ambiente de implantação (por exemplo, Vercel).';
+    }
+    setError(`${context} ${errorMessage}`);
+    console.error(err);
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     if (!currentImage) {
       setError('Nenhuma imagem carregada para editar.');
@@ -128,13 +137,11 @@ const App: React.FC = () => {
         setEditHotspot(null);
         setDisplayHotspot(null);
     } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
-        setError(`Falha ao gerar a imagem. ${errorMessage}`);
-        console.error(err);
+        handleApiError(err, 'Falha ao gerar a imagem.');
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, prompt, editHotspot, addImageToHistory]);
+  }, [currentImage, prompt, editHotspot, addImageToHistory, handleApiError]);
   
   const handleApplyFilter = useCallback(async (filterPrompt: string) => {
     if (!currentImage) {
@@ -150,13 +157,11 @@ const App: React.FC = () => {
         const newImageFile = dataURLtoFile(filteredImageUrl, `filtered-${Date.now()}.png`);
         addImageToHistory(newImageFile);
     } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
-        setError(`Falha ao aplicar o filtro. ${errorMessage}`);
-        console.error(err);
+        handleApiError(err, 'Falha ao aplicar o filtro.');
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, addImageToHistory]);
+  }, [currentImage, addImageToHistory, handleApiError]);
   
   const handleApplyAdjustment = useCallback(async (adjustmentPrompt: string) => {
     if (!currentImage) {
@@ -172,13 +177,11 @@ const App: React.FC = () => {
         const newImageFile = dataURLtoFile(adjustedImageUrl, `adjusted-${Date.now()}.png`);
         addImageToHistory(newImageFile);
     } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
-        setError(`Falha ao aplicar o ajuste. ${errorMessage}`);
-        console.error(err);
+        handleApiError(err, 'Falha ao aplicar o ajuste.');
     } finally {
         setIsLoading(false);
     }
-  }, [currentImage, addImageToHistory]);
+  }, [currentImage, addImageToHistory, handleApiError]);
 
   const handleApplyCrop = useCallback(() => {
     if (!completedCrop || !imgRef.current) {
