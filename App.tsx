@@ -62,21 +62,10 @@ const App: React.FC = () => {
 
   // API Key check effect
   useEffect(() => {
-    // Polyfill process.env for the browser environment if it doesn't exist
+    // The polyfill and initial key setting is now in index.tsx.
+    // We just need to check if the key exists to decide whether to show the modal.
     // @ts-ignore
-    if (typeof window.process === 'undefined') {
-        // @ts-ignore
-        window.process = { env: {} };
-    }
-
-    const savedKey = sessionStorage.getItem('gemini_api_key');
-    if (savedKey) {
-        // @ts-ignore
-        window.process.env.API_KEY = savedKey;
-    }
-
-    // @ts-ignore
-    if (window.process.env.API_KEY) {
+    if (window.process?.env?.API_KEY) {
         setIsApiKeySet(true);
     }
     setIsCheckingApiKey(false);
@@ -84,11 +73,8 @@ const App: React.FC = () => {
 
   const handleSaveApiKey = (apiKey: string) => {
     sessionStorage.setItem('gemini_api_key', apiKey);
-    // @ts-ignore
-    if (typeof window.process === 'undefined') {
-        // @ts-ignore
-        window.process = { env: {} };
-    }
+    // The polyfill is in index.tsx, so we can assume window.process.env exists.
+    // We just need to set the key.
     // @ts-ignore
     window.process.env.API_KEY = apiKey;
     setIsApiKeySet(true);
