@@ -62,7 +62,7 @@ const App: React.FC = () => {
 
   // API Key check effect
   useEffect(() => {
-    const savedKey = sessionStorage.getItem('gemini_api_key');
+    const savedKey = localStorage.getItem('gemini_api_key');
     if (savedKey) {
         setApiKey(savedKey);
     }
@@ -70,7 +70,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSaveApiKey = (key: string) => {
-    sessionStorage.setItem('gemini_api_key', key);
+    localStorage.setItem('gemini_api_key', key);
     setApiKey(key);
   };
 
