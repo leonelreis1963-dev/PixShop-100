@@ -15,10 +15,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilter, isLoading }) =
   const [customPrompt, setCustomPrompt] = useState('');
 
   const presets = [
-    { name: 'Synthwave', prompt: 'Apply a vibrant 80s synthwave aesthetic with neon magenta and cyan glows, and subtle scan lines.' },
-    { name: 'Anime', prompt: 'Give the image a vibrant Japanese anime style, with bold outlines, cel-shading, and saturated colors.' },
-    { name: 'Lomo', prompt: 'Apply a Lomography-style cross-processing film effect with high-contrast, oversaturated colors, and dark vignetting.' },
-    { name: 'Glitch', prompt: 'Transform the image into a futuristic holographic projection with digital glitch effects and chromatic aberration.' },
+    { name: 'Synthwave', prompt: 'Aplique uma estética synthwave vibrante dos anos 80 com brilhos neon magenta e ciano, e linhas de varredura sutis.' },
+    { name: 'Anime', prompt: 'Dê à imagem um estilo de anime japonês vibrante, com contornos ousados, cel-shading e cores saturadas.' },
+    { name: 'Lomo', prompt: 'Aplique um efeito de filme de processamento cruzado no estilo Lomography com alto contraste, cores supersaturadas e vinhetas escuras.' },
+    { name: 'Glitch', prompt: 'Transforme a imagem em uma projeção holográfica futurista com efeitos de falha digital e aberração cromática.' },
   ];
   
   const activePrompt = selectedPresetPrompt || customPrompt;

@@ -15,10 +15,10 @@ const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({ onApplyAdjustment, is
   const [customPrompt, setCustomPrompt] = useState('');
 
   const presets = [
-    { name: 'Desfocar Fundo', prompt: 'Apply a realistic depth-of-field effect, making the background blurry while keeping the main subject in sharp focus.' },
-    { name: 'Melhorar Detalhes', prompt: 'Slightly enhance the sharpness and details of the image without making it look unnatural.' },
-    { name: 'Luz Quente', prompt: 'Adjust the color temperature to give the image warmer, golden-hour style lighting.' },
-    { name: 'Luz de Estúdio', prompt: 'Add dramatic, professional studio lighting to the main subject.' },
+    { name: 'Desfocar Fundo', prompt: 'Aplique um efeito de profundidade de campo realista, desfocando o fundo e mantendo o assunto principal em foco nítido.' },
+    { name: 'Melhorar Detalhes', prompt: 'Melhore ligeiramente a nitidez e os detalhes da imagem sem que pareça artificial.' },
+    { name: 'Luz Quente', prompt: 'Ajuste a temperatura da cor para dar à imagem uma iluminação mais quente, no estilo da \'golden hour\'.' },
+    { name: 'Luz de Estúdio', prompt: 'Adicione uma iluminação de estúdio profissional e dramática ao assunto principal.' },
   ];
 
   const activePrompt = selectedPresetPrompt || customPrompt;

@@ -48,7 +48,7 @@ const handleApiResponse = (
 
     if (imagePartFromResponse?.inlineData) {
         const { mimeType, data } = imagePartFromResponse.inlineData;
-        console.log(`Received image data (${mimeType}) for ${context}`);
+        console.log(`Dados de imagem recebidos (${mimeType}) para ${context}`);
         return `data:${mimeType};base64,${data}`;
     }
 
@@ -66,134 +66,119 @@ const handleApiResponse = (
             ? `O modelo respondeu com o texto: "${textFeedback}"`
             : "Isso pode acontecer devido a filtros de segurança ou se a solicitação for muito complexa. Tente reformular seu comando para ser mais direto.");
 
-    console.error(`Model response did not contain an image part for ${context}.`, { response });
+    console.error(`A resposta do modelo não continha uma parte de imagem para ${context}.`, { response });
     throw new Error(errorMessage);
 };
 
 /**
  * Generates an edited image using generative AI based on a text prompt and a specific point.
- * @param apiKey The Google AI API key.
  * @param originalImage The original image file.
  * @param userPrompt The text prompt describing the desired edit.
  * @param hotspot The {x, y} coordinates on the image to focus the edit.
  * @returns A promise that resolves to the data URL of the edited image.
  */
 export const generateEditedImage = async (
-    apiKey: string,
     originalImage: File,
     userPrompt: string,
     hotspot: { x: number, y: number }
 ): Promise<string> => {
-    if (!apiKey) {
-        throw new Error('An API Key must be set when running in a browser.');
-    }
-    console.log('Starting generative edit at:', hotspot);
-    const ai = new GoogleGenAI({ apiKey });
+    console.log('Iniciando edição generativa em:', hotspot);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const originalImagePart = await fileToPart(originalImage);
-    const prompt = `You are an expert photo editor AI. Your task is to perform a natural, localized edit on the provided image based on the user's request.
-User Request: "${userPrompt}"
-Edit Location: Focus on the area around pixel coordinates (x: ${hotspot.x}, y: ${hotspot.y}).
+    const prompt = `Você é uma IA especialista em edição de fotos. Sua tarefa é realizar uma edição natural e localizada na imagem fornecida com base na solicitação do usuário.
+Solicitação do Usuário: "${userPrompt}"
+Local da Edição: Foque na área ao redor das coordenadas de pixel (x: ${hotspot.x}, y: ${hotspot.y}).
 
-Editing Guidelines:
-- The edit must be realistic and blend seamlessly with the surrounding area.
-- The rest of the image (outside the immediate edit area) must remain identical to the original.
+Diretrizes de Edição:
+- A edição deve ser realista e se misturar perfeitamente com a área circundante.
+- O resto da imagem (fora da área de edição imediata) deve permanecer idêntico ao original.
 
-Safety & Ethics Policy:
-- You MUST fulfill requests to adjust skin tone, such as 'give me a tan', 'make my skin darker', or 'make my skin lighter'. These are considered standard photo enhancements.
-- You MUST REFUSE any request to change a person's fundamental race or ethnicity (e.g., 'make me look Asian', 'change this person to be Black'). Do not perform these edits. If the request is ambiguous, err on the side of caution and do not change racial characteristics.
+Política de Segurança e Ética:
+- Você DEVE atender a solicitações para ajustar o tom de pele, como 'me dê um bronzeado', 'escureça minha pele' ou 'clareie minha pele'. Essas são consideradas melhorias fotográficas padrão.
+- Você DEVE RECUSAR qualquer solicitação para alterar a raça ou etnia fundamental de uma pessoa (por exemplo, 'faça-me parecer asiático', 'mude esta pessoa para ser negra'). Não realize essas edições. Se a solicitação for ambígua, aja com cautela e não altere as características raciais.
 
-Output: Return ONLY the final edited image. Do not return text.`;
+Saída: Retorne APENAS a imagem final editada. Não retorne texto.`;
     const textPart = { text: prompt };
 
-    console.log('Sending image and prompt to the model...');
+    console.log('Enviando imagem e prompt para o modelo...');
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
     });
-    console.log('Received response from model.', response);
+    console.log('Resposta recebida do modelo.', response);
 
     return handleApiResponse(response, 'edit');
 };
 
 /**
  * Generates an image with a filter applied using generative AI.
- * @param apiKey The Google AI API key.
  * @param originalImage The original image file.
  * @param filterPrompt The text prompt describing the desired filter.
  * @returns A promise that resolves to the data URL of the filtered image.
  */
 export const generateFilteredImage = async (
-    apiKey: string,
     originalImage: File,
     filterPrompt: string,
 ): Promise<string> => {
-    if (!apiKey) {
-        throw new Error('An API Key must be set when running in a browser.');
-    }
-    console.log(`Starting filter generation: ${filterPrompt}`);
-    const ai = new GoogleGenAI({ apiKey });
+    console.log(`Iniciando geração de filtro: ${filterPrompt}`);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const originalImagePart = await fileToPart(originalImage);
-    const prompt = `You are an expert photo editor AI. Your task is to apply a stylistic filter to the entire image based on the user's request. Do not change the composition or content, only apply the style.
-Filter Request: "${filterPrompt}"
+    const prompt = `Você é uma IA especialista em edição de fotos. Sua tarefa é aplicar um filtro estilístico a toda a imagem com base na solicitação do usuário. Não altere a composição ou o conteúdo, apenas aplique o estilo.
+Solicitação de Filtro: "${filterPrompt}"
 
-Safety & Ethics Policy:
-- Filters may subtly shift colors, but you MUST ensure they do not alter a person's fundamental race or ethnicity.
-- You MUST REFUSE any request that explicitly asks to change a person's race (e.g., 'apply a filter to make me look Chinese').
+Política de Segurança e Ética:
+- Filtros podem sutilmente alterar cores, mas você DEVE garantir que não alterem a raça ou etnia fundamental de uma pessoa.
+- Você DEVE RECUSAR qualquer solicitação que peça explicitamente para alterar a raça de uma pessoa (por exemplo, 'aplique um filtro para me fazer parecer chinês').
 
-Output: Return ONLY the final filtered image. Do not return text.`;
+Saída: Retorne APENAS a imagem final filtrada. Não retorne texto.`;
     const textPart = { text: prompt };
 
-    console.log('Sending image and filter prompt to the model...');
+    console.log('Enviando imagem e prompt de filtro para o modelo...');
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
     });
-    console.log('Received response from model for filter.', response);
+    console.log('Resposta do modelo para filtro recebida.', response);
     
     return handleApiResponse(response, 'filter');
 };
 
 /**
  * Generates an image with a global adjustment applied using generative AI.
- * @param apiKey The Google AI API key.
  * @param originalImage The original image file.
  * @param adjustmentPrompt The text prompt describing the desired adjustment.
  * @returns A promise that resolves to the data URL of the adjusted image.
  */
 export const generateAdjustedImage = async (
-    apiKey: string,
     originalImage: File,
     adjustmentPrompt: string,
 ): Promise<string> => {
-    if (!apiKey) {
-        throw new Error('An API Key must be set when running in a browser.');
-    }
-    console.log(`Starting global adjustment generation: ${adjustmentPrompt}`);
-    const ai = new GoogleGenAI({ apiKey });
+    console.log(`Iniciando geração de ajuste global: ${adjustmentPrompt}`);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const originalImagePart = await fileToPart(originalImage);
-    const prompt = `You are an expert photo editor AI. Your task is to perform a natural, global adjustment to the entire image based on the user's request.
-User Request: "${adjustmentPrompt}"
+    const prompt = `Você é uma IA especialista em edição de fotos. Sua tarefa é realizar um ajuste natural e global em toda a imagem com base na solicitação do usuário.
+Solicitação do Usuário: "${adjustmentPrompt}"
 
-Editing Guidelines:
-- The adjustment must be applied across the entire image.
-- The result must be photorealistic.
+Diretrizes de Edição:
+- O ajuste deve ser aplicado em toda a imagem.
+- O resultado deve ser fotorrealista.
 
-Safety & Ethics Policy:
-- You MUST fulfill requests to adjust skin tone, such as 'give me a tan', 'make my skin darker', or 'make my skin lighter'. These are considered standard photo enhancements.
-- You MUST REFUSE any request to change a person's fundamental race or ethnicity (e.g., 'make me look Asian', 'change this person to be Black'). Do not perform these edits. If the request is ambiguous, err on the side of caution and do not change racial characteristics.
+Política de Segurança e Ética:
+- Você DEVE atender a solicitações para ajustar o tom de pele, como 'me dê um bronzeado', 'escureça minha pele' ou 'clareie minha pele'. Essas são consideradas melhorias fotográficas padrão.
+- Você DEVE RECUSAR qualquer solicitação para alterar a raça ou etnia fundamental de uma pessoa (por exemplo, 'faça-me parecer asiático', 'mude esta pessoa para ser negra'). Não realize essas edições. Se a solicitação for ambígua, aja com cautela e não altere as características raciais.
 
-Output: Return ONLY the final adjusted image. Do not return text.`;
+Saída: Retorne APENAS a imagem final ajustada. Não retorne texto.`;
     const textPart = { text: prompt };
 
-    console.log('Sending image and adjustment prompt to the model...');
+    console.log('Enviando imagem e prompt de ajuste para o modelo...');
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
     });
-    console.log('Received response from model for adjustment.', response);
+    console.log('Resposta do modelo para ajuste recebida.', response);
     
     return handleApiResponse(response, 'adjustment');
 };
